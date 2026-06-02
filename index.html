@@ -336,6 +336,17 @@ function splitCSV(line){
 }
 function parseCSV(text){
   var lines=text.trim().split(/\r?\n/);
+  // Skip any title/merge rows before the real header row
+  // Real header row contains recognizable column names
+  var startIdx=0;
+  for(var i=0;i<Math.min(5,lines.length);i++){
+    var cols=splitCSV(lines[i]);
+    var joined=cols.join(" ").toLowerCase();
+    if(joined.indexOf("name")>-1||joined.indexOf("email")>-1||joined.indexOf("tiktok")>-1||joined.indexOf("relationship")>-1){
+      startIdx=i;break;
+    }
+  }
+  lines=lines.slice(startIdx);
   var headers=splitCSV(lines[0]);
   return lines.slice(1).map(function(l){
     var v=splitCSV(l);
