@@ -1,1 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Creator Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0A0B0F;--s1:#0F1117;--s2:#14161F;--s3:#1C1F2E;
+  --border:#252840;--border2:#2E3250;
+  --text:#E8EAF6;--muted:#6B7099;--muted2:#4A5070;
+  --accent:#F5C842;--accent2:#7C8FFF;
+  --green:#3ECFAA;--red:#FF6B8A;
+  --known-bg:rgba(245,200,66,0.06);--known-bg2:rgba(245,200,66,0.10);
+  --font-head:"Bebas Neue",sans-serif;
+  --font-body:"DM Sans",sans-serif;
+  --font-mono:"DM Mono",monospace;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:14px;overflow:hidden}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;border:none;background:none;font-family:inherit}
+select,input{font-family:inherit}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 
+/* ── Setup screen ─────────────────────────────────────────────────────────── */
+#setup-screen{
+  position:fixed;inset:0;background:var(--bg);z-index:999;
+  display:flex;align-items:center;justify-content:center;
+}
+.setup-box{
+  width:600px;background:var(--s1);border:1px solid var(--border2);
+  border-radius:20px;padding:40px;
+}
+.setup-logo{font-family:var(--font-head);font-size:36px;letter-spacing:4px;color:var(--text);margin-bottom:4px}
+.setup-sub{font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-bottom:32px;letter-spacing:1px}
+.setup-label{font-family:var(--font-mono);font-size:9px;color:var(--muted2);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.setup-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.setup-row{margin-bottom:20px}
+.setup-input{
+  width:100%;background:var(--s2);border:1px solid var(--border);
+  border-radius:10px;padding:11px 14px;color:var(--text);
+  font-family:var(--font-mono);font-size:11px;outline:none;
+  transition:border 0.15s;
+}
+.setup-input:focus{border-color:var(--accent2)}
+.setup-input::placeholder{color:var(--muted2)}
+.setup-hint{font-size:10px;color:var(--muted2);font-family:var(--font-mono);margin-top:5px}
+.setup-actions{display:flex;align-items:center;gap:12px;margin-top:32px}
+.setup-go{
+  background:var(--accent);color:#000;border-radius:10px;
+  padding:12px 28px;font-family:var(--font-head);font-size:18px;letter-spacing:2px;
+  cursor:pointer;border:none;transition:opacity 0.15s;
+}
+.setup-go:hover{opacity:0.85}
+.setup-skip{font-family:var(--font-mono);font-size:11px;color:var(--muted);cursor:pointer;text-decoration:underline}
+.setup-skip:hover{color:var(--text)}
+.setup-divider{height:1px;background:var(--border);margin:24px 0}
+
+/* ── App layout ───────────────────────────────────────────────────────────── */
+#app{display:flex;height:100vh;overflow:hidden;display:none}
+
+/* ── Sidebar ──────────────────────────────────────────────────────────────── */
+.sidebar{
+  width:248px;min-width:248px;background:var(--s1);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.sidebar-logo{padding:20px 20px 14px;border-bottom:1px solid var(--border)}
+.logo-text{font-family:var(--font-head);font-size:24px;letter-spacing:2px;color:var(--text);line-height:1}
+.logo-sub{font-size:10px;color:var(--muted);font-family:var(--font-mono);letter-spacing:1px;margin-top:3px}
+
+.tab-nav{padding:12px 12px 8px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:2px}
+.tab-nav-label{font-size:9px;font-family:var(--font-mono);color:var(--muted2);text-transform:uppercase;letter-spacing:1.5px;padding:0 6px;margin-bottom:4px}
+.tab-btn{
+  display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;
+  font-size:12px;font-weight:500;color:var(--muted);transition:all 0.15s;text-align:left;position:relative;
+}
+.tab-btn:hover{background:var(--s3);color:var(--text)}
+.tab-btn.active{background:var(--s3);color:var(--text)}
+.tab-btn.active::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:60%;border-radius:0 2px 2px 0}
+.tab-btn[data-tab="creators"].active::before{background:var(--accent)}
+.tab-btn[data-tab="agencies"].active::before{background:var(--green)}
+.tab-btn[data-tab="editors"].active::before{background:var(--accent2)}
+.tab-btn[data-tab="brands"].active::before{background:var(--red)}
+.tab-icon{font-size:14px;width:18px;text-align:center}
+.tab-count{margin-left:auto;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:1px 7px;font-size:10px;font-family:var(--font-mono);color:var(--muted)}
+.tab-btn.active .tab-count{color:var(--text)}
+.tab-connected{width:6px;height:6px;border-radius:50%;background:var(--green);margin-left:4px;flex-shrink:0}
+.tab-disconnected{width:6px;height:6px;border-radius:50%;background:var(--border2);margin-left:4px;flex-shrink:0}
+
+.sidebar-scroll{flex:1;overflow-y:auto;padding-bottom:16px}
+.filter-section{padding:14px 16px;border-bottom:1px solid var(--border)}
+.filter-label{font-size:9px;font-family:var(--font-mono);color:var(--muted2);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;display:block}
+.search-wrap{position:relative}
+.search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:0.35;pointer-events:none}
+.search-input{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:8px 10px 8px 32px;color:var(--text);font-size:12px;outline:none;transition:border 0.15s}
+.search-input:focus{border-color:var(--accent2)}
+.search-input::placeholder{color:var(--muted2)}
+.chip-group{display:flex;flex-wrap:wrap;gap:5px}
+.chip{padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:var(--s2);color:var(--muted);cursor:pointer;transition:all 0.12s;font-family:var(--font-mono)}
+.chip:hover{border-color:var(--border2);color:var(--text)}
+.chip.active{border-color:var(--accent);background:rgba(245,200,66,0.1);color:var(--accent)}
+.filter-select{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-size:11px;font-family:var(--font-mono);outline:none;cursor:pointer}
+.stats-grid{display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-bottom:1px solid var(--border)}
+.stat-pill{display:flex;justify-content:space-between;align-items:center;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:7px 11px}
+.stat-pill-label{font-size:10px;font-family:var(--font-mono);color:var(--muted)}
+.stat-pill-val{font-size:12px;font-weight:600;font-family:var(--font-head);letter-spacing:1px}
+.stat-pill-val.gold{color:var(--accent)}
+.stat-pill-val.blue{color:var(--accent2)}
+.stat-pill-val.green{color:var(--green)}
+.col-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.col-toggle{padding:5px 8px;border-radius:6px;font-size:10px;font-family:var(--font-mono);border:1px solid var(--border);background:var(--s2);color:var(--muted);cursor:pointer;text-align:center;transition:all 0.12s}
+.col-toggle:hover:not(.on){border-color:var(--border2);color:var(--text)}
+.col-toggle.on{background:var(--accent);color:#000;border-color:var(--accent);font-weight:500}
+.bar-row{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+.bar-label{font-size:10px;font-family:var(--font-mono);color:var(--muted);width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-track{flex:1;height:5px;background:var(--s3);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;transition:width 0.4s ease}
+.bar-count{font-size:10px;font-family:var(--font-mono);color:var(--muted2);width:28px;text-align:right}
+
+/* ── Main ─────────────────────────────────────────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+.topbar{padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--s1);flex-shrink:0}
+.topbar-title{font-family:var(--font-head);font-size:22px;letter-spacing:2px;color:var(--text);line-height:1;margin-right:4px}
+.result-info{font-size:11px;font-family:var(--font-mono);color:var(--muted);margin-right:auto}
+.result-info span{color:var(--text)}
+.topbar-btn{background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;color:var(--muted);font-size:10px;font-family:var(--font-mono);cursor:pointer;transition:all 0.15s}
+.topbar-btn:hover{color:var(--text);border-color:var(--border2)}
+.sort-select{background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:5px 10px;color:var(--text);font-size:11px;font-family:var(--font-mono);outline:none;cursor:pointer}
+
+/* ── Table ────────────────────────────────────────────────────────────────── */
+.table-wrap{flex:1;overflow:auto;position:relative}
+table{width:100%;border-collapse:collapse;min-width:800px}
+thead th{background:var(--s2);padding:8px 12px;font-family:var(--font-mono);font-size:9px;font-weight:500;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;text-transform:uppercase;letter-spacing:0.8px;position:sticky;top:0;z-index:2;cursor:pointer;user-select:none}
+thead th:hover{color:var(--text)}
+thead th.sorted{color:var(--accent)}
+.th-inner{display:flex;align-items:center;gap:4px}
+.sort-arrow{opacity:0.4;font-size:9px}
+th.sorted .sort-arrow{opacity:1;color:var(--accent)}
+tbody tr{border-bottom:1px solid rgba(37,40,64,0.5);cursor:pointer;transition:background 0.1s}
+tbody tr:hover{background:rgba(124,143,255,0.05)}
+tbody tr.known{background:var(--known-bg)}
+tbody tr.known:hover{background:var(--known-bg2)}
+td{padding:7px 12px;font-size:12px;vertical-align:middle;white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+.badge-known{display:inline-flex;align-items:center;gap:4px;background:rgba(245,200,66,0.12);color:var(--accent);border:1px solid rgba(245,200,66,0.25);border-radius:4px;padding:2px 8px;font-size:9px;font-family:var(--font-mono);white-space:nowrap}
+.badge-new{color:var(--muted2);font-size:9px;font-family:var(--font-mono)}
+.handle-link{color:var(--accent2);font-family:var(--font-mono);font-size:11px}
+.handle-link:hover{text-decoration:underline}
+.name-val{font-weight:500;color:var(--text)}
+.mono-sm{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.followers-val{font-family:var(--font-head);font-size:13px;color:var(--green);letter-spacing:1px}
+.gmv-val{font-family:var(--font-mono);font-size:11px;color:var(--accent)}
+.kalo-link{color:var(--accent);font-size:10px;font-family:var(--font-mono)}
+.kalo-link:hover{text-decoration:underline}
+.empty{padding:60px 40px;text-align:center;color:var(--muted);font-family:var(--font-mono);font-size:12px}
+
+/* ── Not connected state ──────────────────────────────────────────────────── */
+.not-connected{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+.nc-icon{font-size:40px;opacity:0.25}
+.nc-title{font-family:var(--font-head);font-size:28px;letter-spacing:3px;color:var(--muted)}
+.nc-sub{font-size:11px;font-family:var(--font-mono);color:var(--muted2);text-align:center;max-width:320px;line-height:1.8}
+.nc-btn{background:var(--s2);border:1px solid var(--border2);border-radius:9px;padding:9px 20px;font-family:var(--font-mono);font-size:11px;color:var(--muted);cursor:pointer;transition:all 0.15s;margin-top:4px}
+.nc-btn:hover{color:var(--text);border-color:var(--accent2)}
+
+/* ── Modal ────────────────────────────────────────────────────────────────── */
+.overlay{position:fixed;inset:0;background:rgba(10,11,15,0.85);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity 0.2s}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--s1);border:1px solid var(--border2);border-radius:16px;width:560px;max-height:82vh;overflow-y:auto;padding:28px;position:relative;transform:translateY(16px);transition:transform 0.2s}
+.overlay.open .modal{transform:translateY(0)}
+.modal-close{position:absolute;top:16px;right:16px;background:var(--s2);border:1px solid var(--border);color:var(--muted);border-radius:7px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer}
+.modal-close:hover{color:var(--text)}
+.modal-badge{display:inline-flex;margin-bottom:10px}
+.modal-name{font-family:var(--font-head);font-size:26px;letter-spacing:2px;color:var(--text);line-height:1;margin-bottom:3px}
+.modal-handle{font-family:var(--font-mono);font-size:13px;color:var(--accent2);margin-bottom:18px}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.modal-field{background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:10px 12px}
+.mf-label{font-size:9px;font-family:var(--font-mono);color:var(--muted2);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.mf-val{font-size:12px;color:var(--text);word-break:break-all;line-height:1.5}
+.mf-val a{color:var(--accent2)}
+.mf-val a:hover{text-decoration:underline}
+.modal-cats{background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:10px 12px}
+.cat-tag{display:inline-block;background:rgba(124,143,255,0.1);color:var(--accent2);border:1px solid rgba(124,143,255,0.2);border-radius:4px;padding:2px 8px;font-size:10px;font-family:var(--font-mono);margin:2px}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SETUP SCREEN — paste your 4 sheet URLs here, then click Launch
+════════════════════════════════════════════════════════════════════════════ -->
+<div id="setup-screen">
+  <div class="setup-box">
+    <div class="setup-logo">CREATOR HUB</div>
+    <div class="setup-sub">Paste your Google Sheet CSV URLs below, then click Launch</div>
+
+    <div class="setup-row">
+      <div class="setup-label">
+        <span class="setup-dot" style="background:var(--accent)"></span>
+        Creators sheet URL
+      </div>
+      <input class="setup-input" id="url-creators" placeholder="https://docs.google.com/spreadsheets/d/…/export?format=csv&gid=0">
+      <div class="setup-hint">File → Share → Publish to web → Creators tab → CSV</div>
+    </div>
+
+    <div class="setup-row">
+      <div class="setup-label">
+        <span class="setup-dot" style="background:var(--green)"></span>
+        Video Production Agencies sheet URL
+      </div>
+      <input class="setup-input" id="url-agencies" placeholder="https://docs.google.com/spreadsheets/d/…/export?format=csv&gid=…">
+    </div>
+
+    <div class="setup-row">
+      <div class="setup-label">
+        <span class="setup-dot" style="background:var(--accent2)"></span>
+        Editors sheet URL
+      </div>
+      <input class="setup-input" id="url-editors" placeholder="https://docs.google.com/spreadsheets/d/…/export?format=csv&gid=…">
+    </div>
+
+    <div class="setup-row">
+      <div class="setup-label">
+        <span class="setup-dot" style="background:var(--red)"></span>
+        Brands sheet URL
+      </div>
+      <input class="setup-input" id="url-brands" placeholder="https://docs.google.com/spreadsheets/d/…/export?format=csv&gid=…">
+    </div>
+
+    <div class="setup-divider"></div>
+    <div class="setup-actions">
+      <button class="setup-go" onclick="launch()">LAUNCH →</button>
+      <span class="setup-skip" onclick="launchFallback()">Skip — use baked-in data for now</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     MAIN APP
+════════════════════════════════════════════════════════════════════════════ -->
+<div id="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-text">CREATOR HUB</div>
+      <div class="logo-sub" id="data-source-label">Loading…</div>
+    </div>
+
+    <div class="tab-nav">
+      <span class="tab-nav-label">Sections</span>
+      <button class="tab-btn active" data-tab="creators">
+        <span class="tab-icon">⚡</span> Creators
+        <span class="tab-connected" id="dot-creators" style="display:none"></span>
+        <span class="tab-count" id="cnt-creators">—</span>
+      </button>
+      <button class="tab-btn" data-tab="agencies">
+        <span class="tab-icon">🎬</span> Agencies
+        <span class="tab-connected" id="dot-agencies" style="display:none"></span>
+        <span class="tab-disconnected" id="dot-agencies-off"></span>
+        <span class="tab-count" id="cnt-agencies">—</span>
+      </button>
+      <button class="tab-btn" data-tab="editors">
+        <span class="tab-icon">✂️</span> Editors
+        <span class="tab-connected" id="dot-editors" style="display:none"></span>
+        <span class="tab-disconnected" id="dot-editors-off"></span>
+        <span class="tab-count" id="cnt-editors">—</span>
+      </button>
+      <button class="tab-btn" data-tab="brands">
+        <span class="tab-icon">🏷️</span> Brands
+        <span class="tab-connected" id="dot-brands" style="display:none"></span>
+        <span class="tab-disconnected" id="dot-brands-off"></span>
+        <span class="tab-count" id="cnt-brands">—</span>
+      </button>
+    </div>
+
+    <!-- Creator filters -->
+    <div class="sidebar-scroll" id="sidebar-creators">
+      <div class="filter-section">
+        <span class="filter-label">Search</span>
+        <div class="search-wrap">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input class="search-input" id="searchInput" placeholder="name, @handle, email…" autocomplete="off">
+        </div>
+      </div>
+      <div class="filter-section">
+        <span class="filter-label">Relationship</span>
+        <div class="chip-group">
+          <div class="chip active" data-filter="rel" data-val="all">All</div>
+          <div class="chip" data-filter="rel" data-val="known">⭐ Known</div>
+          <div class="chip" data-filter="rel" data-val="new">New</div>
+        </div>
+      </div>
+      <div class="filter-section">
+        <span class="filter-label">Min Followers</span>
+        <select class="filter-select" id="flt-followers">
+          <option value="0">Any size</option>
+          <option value="1000">1K+</option>
+          <option value="10000">10K+</option>
+          <option value="50000">50K+</option>
+          <option value="100000">100K+</option>
+          <option value="500000">500K+</option>
+          <option value="1000000">1M+</option>
+        </select>
+      </div>
+      <div class="filter-section">
+        <span class="filter-label">Category</span>
+        <select class="filter-select" id="flt-cat">
+          <option value="">All categories</option>
+        </select>
+      </div>
+      <div class="stats-grid">
+        <span class="filter-label" style="margin-bottom:2px">Stats</span>
+        <div class="stat-pill">
+          <span class="stat-pill-label">Showing</span>
+          <span class="stat-pill-val blue" id="st-showing">—</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-pill-label">⭐ Known</span>
+          <span class="stat-pill-val gold" id="st-known">—</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-pill-label">Total Followers</span>
+          <span class="stat-pill-val green" id="st-followers">—</span>
+        </div>
+      </div>
+      <div class="filter-section">
+        <span class="filter-label">Columns</span>
+        <div class="col-grid" id="colToggles"></div>
+      </div>
+      <div class="filter-section">
+        <span class="filter-label">Top Categories</span>
+        <div id="catChart"></div>
+      </div>
+    </div>
+
+    <!-- Generic sidebar for other tabs -->
+    <div class="sidebar-scroll" id="sidebar-other" style="display:none">
+      <div class="filter-section">
+        <span class="filter-label">Search</span>
+        <div class="search-wrap">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input class="search-input" id="searchInput2" placeholder="Search…" autocomplete="off" oninput="filterGeneric()">
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="topbar-title">CREATORS</div>
+      <div class="result-info">Showing <span id="showingCount">—</span> of <span id="totalCount">—</span></div>
+      <select class="sort-select" id="sortSelect">
+        <option value="known_first">⭐ Known first</option>
+        <option value="followers_desc">Followers ↓</option>
+        <option value="followers_asc">Followers ↑</option>
+        <option value="name_asc">Name A → Z</option>
+      </select>
+      <button class="topbar-btn" onclick="document.getElementById('setup-screen').style.display='flex';document.getElementById('app').style.display='none'">⚙ URLs</button>
+      <button class="topbar-btn" id="refreshBtn">↻ Refresh</button>
+    </div>
+
+    <!-- Creators view -->
+    <div id="view-creators" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div class="table-wrap" id="tableWrap">
+        <table id="mainTable">
+          <thead><tr id="tableHead"></tr></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+        <div class="empty" id="emptyState" style="display:none">No creators match your filters.</div>
+      </div>
+    </div>
+
+    <!-- Agencies view -->
+    <div id="view-agencies" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+      <div class="not-connected" id="nc-agencies">
+        <div class="nc-icon">🎬</div>
+        <div class="nc-title">AGENCIES</div>
+        <div class="nc-sub">No sheet connected yet. Click ⚙ URLs in the top bar to add your Video Production Agencies sheet URL.</div>
+      </div>
+      <div class="table-wrap" id="tw-agencies" style="display:none">
+        <table id="tbl-agencies"><thead><tr id="th-agencies"></tr></thead><tbody id="tb-agencies"></tbody></table>
+      </div>
+    </div>
+
+    <!-- Editors view -->
+    <div id="view-editors" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+      <div class="not-connected" id="nc-editors">
+        <div class="nc-icon">✂️</div>
+        <div class="nc-title">EDITORS</div>
+        <div class="nc-sub">No sheet connected yet. Click ⚙ URLs in the top bar to add your Editors sheet URL.</div>
+      </div>
+      <div class="table-wrap" id="tw-editors" style="display:none">
+        <table id="tbl-editors"><thead><tr id="th-editors"></tr></thead><tbody id="tb-editors"></tbody></table>
+      </div>
+    </div>
+
+    <!-- Brands view -->
+    <div id="view-brands" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+      <div class="not-connected" id="nc-brands">
+        <div class="nc-icon">🏷️</div>
+        <div class="nc-title">BRANDS</div>
+        <div class="nc-sub">No sheet connected yet. Click ⚙ URLs in the top bar to add your Brands sheet URL.</div>
+      </div>
+      <div class="table-wrap" id="tw-brands" style="display:none">
+        <table id="tbl-brands"><thead><tr id="th-brands"></tr></thead><tbody id="tb-brands"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <button class="modal-close" id="modalClose">✕</button>
+    <div class="modal-badge" id="m-badge"></div>
+    <div class="modal-name" id="m-name"></div>
+    <div class="modal-handle" id="m-handle"></div>
+    <div class="modal-grid" id="m-grid"></div>
+    <div class="modal-cats" id="m-cats"></div>
+  </div>
+</div>
+
+<script>
