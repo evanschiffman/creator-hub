@@ -356,21 +356,34 @@ function parseCSV(text){
   }).filter(function(r){return Object.values(r).some(function(v){return v})});
 }
 function csvToCreator(row){
+  // Extract handle from TikTok URL field (e.g. https://tiktok.com/@handle)
+  var tiktokRaw = row["TikTok URL"]||row["TikTok Handle"]||row["tiktok"]||"";
+  var tiktokHandle = tiktokRaw;
+  var urlMatch = tiktokRaw.match(/tiktok\.com\/@([\w.]+)/);
+  if(urlMatch) tiktokHandle = urlMatch[1];
+  else tiktokHandle = cleanH(tiktokRaw);
+
   return{
     name:(row["Full Name"]||row["full_name"]||row["name"]||"").trim(),
     email:row["Email"]||row["email"]||"",
     phone:row["Phone"]||row["phone"]||"",
-    tiktok:cleanH(row["TikTok Handle"]||row["TikTok"]||row["tiktok"]||""),
-    instagram:cleanH(row["Instagram Handle"]||row["Instagram"]||row["instagram"]||""),
+    tiktok:tiktokHandle,
+    tiktok_url:tiktokRaw.indexOf("http")===0 ? tiktokRaw : (tiktokHandle?"https://tiktok.com/@"+tiktokHandle:""),
+    instagram:cleanH(row["Instagram"]||row["Instagram Handle"]||row["instagram"]||""),
     youtube:cleanH(row["YouTube"]||row["youtube"]||""),
-    twitter:cleanH(row["Twitter / X"]||row["twitter_x"]||""),
+    twitter:cleanH(row["X / Twitter"]||row["Twitter / X"]||row["twitter_x"]||""),
+    facebook:cleanH(row["Facebook"]||row["facebook"]||""),
+    whatsapp:cleanH(row["WhatsApp"]||row["whatsapp"]||""),
+    telegram:cleanH(row["Telegram"]||row["telegram"]||""),
     location:row["Location"]||row["location"]||"",
     country:row["Country"]||row["country"]||"",
-    categories:row["Categories"]||row["categories"]||"",
-    followers:safeInt(row["Follower Count"]||row["follower_count"]||row["Followers"]||0),
-    gmv:row["Recent GMV ($)"]||row["recent_gmv"]||"",
+    categories:row["Niche"]||row["Categories"]||row["categories"]||"",
+    followers:safeInt(row["TikTok Followers"]||row["Follower Count"]||row["follower_count"]||0),
+    gmv:"",
     kalodata:row["Kalodata URL"]||row["kalodata_url"]||"",
-    tiktok_url:"",
+    school:row["School"]||"",
+    rating:row["Rating (/ 5)"]||"",
+    notes:row["Notes"]||"",
     known:(row["Relationship"]||"").indexOf("Known")>-1,
   };
 }
