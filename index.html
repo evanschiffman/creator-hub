@@ -447,12 +447,33 @@ async function loadGeneric(tab){
   }catch(e){console.warn("Failed to load",tab,e)}
 }
 
+function renderCellVal(val){
+  if(!val) return'<span style="color:var(--muted2)">—</span>';
+  // Clickable URL
+  if(val.indexOf("http")===0){
+    var label = val.replace(/^https?:\/\/(www\.)?/,"").split("/")[0];
+    return'<a class="handle-link" href="'+esc(val)+'" target="_blank" onclick="event.stopPropagation()">↗ '+esc(label)+'</a>';
+  }
+  // Social handle
+  if(val.indexOf("@")===0){
+    return'<span class="handle-link" style="cursor:default">'+esc(val)+'</span>';
+  }
+  // Known badge
+  if(val.indexOf("Known")>-1){
+    return'<span class="badge-known">⭐ Known</span>';
+  }
+  if(val==="No Relationship"){
+    return'<span class="badge-new">· New</span>';
+  }
+  return'<span class="mono-sm">'+esc(val)+'</span>';
+}
+
 function renderGeneric(tab,data){
   if(!data.length) return;
   var headers=Object.keys(data[0]);
   document.getElementById("th-"+tab).innerHTML=headers.map(function(h){return'<th><div class="th-inner">'+esc(h)+'</div></th>'}).join("");
   document.getElementById("tb-"+tab).innerHTML=data.map(function(row){
-    return"<tr>"+headers.map(function(h){return'<td><span class="mono-sm">'+esc(row[h])+'</span></td>'}).join("")+"</tr>";
+    return"<tr>"+headers.map(function(h){return'<td>'+renderCellVal(row[h])+'</td>'}).join("")+"</tr>";
   }).join("");
   document.getElementById("nc-"+tab).style.display="none";
   document.getElementById("tw-"+tab).style.display="block";
