@@ -327,33 +327,97 @@ function splitCSV(line){
   var r=[],c="",q=false;
   for(var i=0;i<line.length;i++){
     var ch=line[i];
-    if(ch==='"'){q=!q}
-    else if(ch===","&&!q){r.push(c);c=""}
-    else{c+=ch}
+    var next=line[i+1];
+    if(ch==='"' && q && next==='"'){c+='"';i++;}
+    else if(ch==='"'){q=!q;}
+    else if(ch===","&&!q){r.push(c);c="";}
+    else{c+=ch;}
   }
   r.push(c);
-  return r.map(function(s){return s.replace(/^"|"$/g,"")});
+  return r.map(function(s){return String(s||"").replace(/^"|"$/g,"").trim()});
 }
+
+function parseCSVRows(text){
+  // Handles quoted commas and quoted new lines. Google CSV can contain both.
+  var rows=[],row=[],cell="",q=false;
+  text=String(text||"").replace(/^\uFEFF/,"");
+  for(var i=0;i<text.length;i++){
+    var ch=text[i];
+    var next=text[i+1];
+    if(ch==='"' && q && next==='"'){cell+='"';i++;}
+    else if(ch==='"'){q=!q;}
+    else if(ch===","&&!q){row.push(cell);cell="";}
+    else if((ch==="\n"||ch==="\r")&&!q){
+      if(ch==="\r"&&next==="\n") i++;
+      row.push(cell);cell="";
+      if(row.some(function(v){return String(v).trim()!==""})) rows.push(row);
+      row=[];
+    }else{cell+=ch;}
+  }
+  row.push(cell);
+  if(row.some(function(v){return String(v).trim()!==""})) rows.push(row);
+  return rows.map(function(r){return r.map(function(v){return String(v||"").trim()})});
+}
+
 function parseCSV(text){
-  var lines=text.trim().split(/\r?\n/);
-  // Skip any title/merge rows before the real header row
-  // Real header row contains recognizable column names
+  var rows=parseCSVRows(text);
+  if(!rows.length) return [];
+
+  // Skip any title/merged rows before the real header row.
   var startIdx=0;
-  for(var i=0;i<Math.min(5,lines.length);i++){
-    var cols=splitCSV(lines[i]);
-    var joined=cols.join(" ").toLowerCase();
-    if(joined.indexOf("name")>-1||joined.indexOf("email")>-1||joined.indexOf("tiktok")>-1||joined.indexOf("relationship")>-1){
+  for(var i=0;i<Math.min(10,rows.length);i++){
+    var joined=rows[i].join(" ").toLowerCase();
+    if(joined.indexOf("name")>-1||joined.indexOf("email")>-1||joined.indexOf("tiktok")>-1||joined.indexOf("relationship")>-1||joined.indexOf("brand")>-1||joined.indexOf("agency")>-1||joined.indexOf("editor")>-1){
       startIdx=i;break;
     }
   }
-  lines=lines.slice(startIdx);
-  var headers=splitCSV(lines[0]);
-  return lines.slice(1).map(function(l){
-    var v=splitCSV(l);
+
+  var headers=rows[startIdx].map(function(h,i){
+    h=String(h||"").trim();
+    return h || ("Column "+(i+1));
+  });
+
+  return rows.slice(startIdx+1).map(function(v){
     var o={};
-    headers.forEach(function(h,i){o[h.trim()]=((v[i]||"").trim())});
+    headers.forEach(function(h,i){o[h]=((v[i]||"").trim())});
     return o;
-  }).filter(function(r){return Object.values(r).some(function(v){return v})});
+  }).filter(function(r){return Object.values(r).some(function(v){return String(v||"").trim()!==""})});
+}
+
+function normalizeCsvUrl(url){
+  var u=String(url||"").trim().replace(/&amp;/g,"&").replace(/\s+/g,"");
+  if(!u) return "";
+
+  // If user pasted the published HTML link, convert it to the CSV endpoint.
+  if(u.indexOf("/pubhtml")>-1){
+    u=u.replace("/pubhtml","/pub");
+  }
+
+  // If it is a published /pub link but output is missing/wrong, force CSV.
+  if(u.indexOf("/pub?")>-1){
+    u=u.replace(/([?&])output=[^&]*/,"$1output=csv");
+    if(u.indexOf("output=csv")===-1) u += (u.indexOf("?")>-1?"&":"?")+"output=csv";
+    if(u.indexOf("single=true")===-1) u += "&single=true";
+  }
+
+  return u;
+}
+
+async function fetchCsvUrl(url,tab){
+  var clean=normalizeCsvUrl(url);
+  if(!clean) throw new Error(tab+" URL is empty");
+
+  var bust=clean+(clean.indexOf("?")>-1?"&":"?")+"cachebust="+Date.now();
+  var res=await fetch(bust,{cache:"no-store"});
+  if(!res.ok) throw new Error(tab+" HTTP "+res.status);
+
+  var text=await res.text();
+  var preview=text.slice(0,250).toLowerCase();
+  if(preview.indexOf("<html")>-1 || preview.indexOf("<!doctype html")>-1){
+    throw new Error(tab+" returned an HTML page, not CSV. Re-copy File → Share → Publish to web → that exact tab → CSV.");
+  }
+  if(!text.trim()) throw new Error(tab+" CSV is empty");
+  return text;
 }
 function csvToCreator(row){
   // Extract handle from TikTok URL field (e.g. https://tiktok.com/@handle)
@@ -394,34 +458,46 @@ function showLoading(msg){
 }
 function hideLoading(){document.getElementById("loading-overlay").style.display="none"}
 
-function launch(){
-  var u1=document.getElementById("url-creators").value.trim();
+async function launch(){
+  document.getElementById("setup-error").style.display="none";
+  document.getElementById("setup-error").textContent="";
+
+  var u1=normalizeCsvUrl(document.getElementById("url-creators").value);
   if(!u1){document.getElementById("setup-error").style.display="block";document.getElementById("setup-error").textContent="Please paste your Creators sheet URL.";return}
   URLS.creators=u1;
-  URLS.agencies=document.getElementById("url-agencies").value.trim();
-  URLS.editors=document.getElementById("url-editors").value.trim();
-  URLS.brands=document.getElementById("url-brands").value.trim();
+  URLS.agencies=normalizeCsvUrl(document.getElementById("url-agencies").value);
+  URLS.editors=normalizeCsvUrl(document.getElementById("url-editors").value);
+  URLS.brands=normalizeCsvUrl(document.getElementById("url-brands").value);
+
+  document.getElementById("url-creators").value=URLS.creators;
+  document.getElementById("url-agencies").value=URLS.agencies;
+  document.getElementById("url-editors").value=URLS.editors;
+  document.getElementById("url-brands").value=URLS.brands;
   localStorage.setItem("ch_urls",JSON.stringify(URLS));
   document.getElementById("setup-screen").style.display="none";
   showLoading("Loading creators from Google Sheets…");
-  loadCreators().then(function(){
-    hideLoading();
+  loadCreators().then(async function(){
     document.getElementById("app").classList.add("visible");
-    if(URLS.agencies) loadGeneric("agencies");
-    if(URLS.editors)  loadGeneric("editors");
-    if(URLS.brands)   loadGeneric("brands");
+
+    // Load optional sheets independently. One bad optional URL will not break the whole dashboard.
+    var jobs=[];
+    if(URLS.agencies) jobs.push(loadGeneric("agencies"));
+    if(URLS.editors)  jobs.push(loadGeneric("editors"));
+    if(URLS.brands)   jobs.push(loadGeneric("brands"));
+    if(jobs.length) await Promise.allSettled(jobs);
+
+    hideLoading();
   }).catch(function(e){
     hideLoading();
     document.getElementById("setup-screen").style.display="flex";
     document.getElementById("setup-error").style.display="block";
-    document.getElementById("setup-error").textContent="Could not load sheet. Make sure it's published as CSV and publicly accessible.";
+    document.getElementById("setup-error").textContent="Could not load Creators. Make sure the Creators tab is published as CSV and publicly accessible. " + e.message;
+    console.error(e);
   });
 }
 
 async function loadCreators(){
-  var res=await fetch(URLS.creators);
-  if(!res.ok) throw new Error("HTTP "+res.status);
-  var text=await res.text();
+  var text=await fetchCsvUrl(URLS.creators,"creators");
   ALL_DATA=parseCSV(text).map(csvToCreator);
   ALL_DATA.sort(function(a,b){
     if(a.known!==b.known) return a.known?-1:1;
@@ -436,15 +512,31 @@ async function loadCreators(){
 
 async function loadGeneric(tab){
   try{
-    var res=await fetch(URLS[tab]);
-    var text=await res.text();
+    showLoading("Loading "+tab+" from Google Sheets…");
+    console.log("Loading "+tab+" from:",URLS[tab]);
+
+    var text=await fetchCsvUrl(URLS[tab],tab);
+    console.log(tab+" CSV preview:",text.slice(0,300));
+
     var data=parseCSV(text);
+    console.log(tab+" parsed rows:",data.length,data[0]);
+
     genericData[tab]=data;
-    document.getElementById("cnt-"+tab).textContent=data.length;
+    document.getElementById("cnt-"+tab).textContent=data.length.toLocaleString();
     document.getElementById("dot-"+tab).style.display="inline-block";
     document.getElementById("dot-"+tab+"-off").style.display="none";
     renderGeneric(tab,data);
-  }catch(e){console.warn("Failed to load",tab,e)}
+    return true;
+  }catch(e){
+    console.error("Failed to load "+tab,e);
+    document.getElementById("cnt-"+tab).textContent="ERR";
+    var off=document.getElementById("dot-"+tab+"-off");
+    if(off) off.style.display="inline-block";
+
+    // Keep the app usable, but tell you exactly which tab failed.
+    alert("Could not load "+tab+".\n\n"+e.message+"\n\nCheck that this exact tab is published to web as CSV and that the pasted URL includes /pub?gid=...&single=true&output=csv");
+    return false;
+  }
 }
 
 function renderCellVal(val){
@@ -647,7 +739,22 @@ document.getElementById("searchInput").addEventListener("input",applyFilters);
 document.getElementById("flt-followers").addEventListener("change",applyFilters);
 document.getElementById("flt-cat").addEventListener("change",applyFilters);
 document.getElementById("sortSelect").addEventListener("change",function(e){sortMode=e.target.value;applyFilters()});
-document.getElementById("refreshBtn").addEventListener("click",function(){showLoading("Refreshing…");loadCreators().then(hideLoading)});
+document.getElementById("refreshBtn").addEventListener("click",async function(){
+  showLoading("Refreshing…");
+  try{
+    await loadCreators();
+    var jobs=[];
+    if(URLS.agencies) jobs.push(loadGeneric("agencies"));
+    if(URLS.editors)  jobs.push(loadGeneric("editors"));
+    if(URLS.brands)   jobs.push(loadGeneric("brands"));
+    if(jobs.length) await Promise.allSettled(jobs);
+  }catch(e){
+    alert("Refresh failed: "+e.message);
+    console.error(e);
+  }finally{
+    hideLoading();
+  }
+});
 document.getElementById("urlsBtn").addEventListener("click",function(){
   document.getElementById("setup-screen").style.display="flex";
   document.getElementById("app").classList.remove("visible");
